@@ -3,13 +3,16 @@ from sqlalchemy.orm import Session
 from voice_bot import handle_voice
 
 from database import get_db
-from models import Complaint, Customer, Bill
+from models import Complaint, Customer, Bill,User
 from schemas import (
     ComplaintCreate,
     CustomerCreate,
     BillCreate,
     ChatRequest,
-    AIComplaintRequest
+    AIComplaintRequest,
+    UserCreate,
+    LoginRequest,
+    ComplaintStatusUpdate
 )
 
 from ai_service import ask_ai
@@ -242,3 +245,56 @@ def chat(chat_request: ChatRequest):
 @app.api_route("/voice", methods=["GET", "POST"])
 def voice():
     return handle_voice()
+@app.post("/signup")
+def signup(user: UserCreate, db: Session = Depends(get_db)):
+    new_user = User(
+        name=user.name,
+        email=user.email,
+        password=user.password
+    )
+
+    db.add(new_user)
+    db.commit()
+
+    return {"message": "User registered successfully"}
+
+@app.post("/login")
+def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(
+        User.email == login_data.email
+    ).first()
+
+    if not user:
+        return {"message": "User not found"}
+
+    if user.password != login_data.password:
+        return {"message": "Invalid password"}
+
+    return {
+        "message": "Login successful",
+        "user_id": user.id,
+        "name": user.name
+    }
+
+@app.put("/complaint/{complaint_id}")
+def update_complaint_status(
+    complaint_id: int,
+    update: ComplaintStatusUpdate,
+    db: Session = Depends(get_db)
+):
+    complaint = db.query(Complaint).filter(
+        Complaint.id == complaint_id
+    ).first()
+
+    if not complaint:
+        return {"message": "Complaint not found"}
+
+    complaint.status = update.status
+
+    db.commit()
+
+    return {
+        "message": "Complaint status updated successfully",
+        "complaint_id": complaint.id,
+        "new_status": complaint.status
+    }

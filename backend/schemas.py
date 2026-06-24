@@ -27,3 +27,14 @@ class ChatRequest(BaseModel):
 class AIComplaintRequest(BaseModel):
     customer_name: str
     message: str
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class ComplaintStatusUpdate(BaseModel):
+    status: str
